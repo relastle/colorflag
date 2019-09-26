@@ -59,7 +59,7 @@ func main() {
 
 #### Help output
 
-![](./example/figures/sub-expand-example.png)
+![](./_example/figures/sub-expand-example.png)
 
 
 # [License](LICENSE)
