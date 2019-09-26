@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-colorable"
 )
 
 // OutputFormatter is a formatter that constructs help
@@ -38,14 +39,31 @@ func (o *OutputFormatter) AddGroup(groupName string) {
 
 // AddFlag adds group name which is followd by
 // multiple options or flags
-func (o *OutputFormatter) AddFlag(flagName string, flagType string, flagUsage string) {
+func (o *OutputFormatter) AddFlag(flg *flag.Flag) {
+	name, usage := flag.UnquoteUsage(flg)
 	o.addIndent()
 	o.result += fmt.Sprintf(
-		"%v (%v) %v\n",
-		color.GreenString(flagName),
-		flagType,
-		flagUsage,
+		"%v <%v> %v\n",
+		color.GreenString("-"+flg.Name),
+		name,
+		usage,
 	)
+}
+
+// AddSubCommand adds subcommand
+func (o *OutputFormatter) AddSubCommand(subCommand string) {
+	o.addIndent()
+	o.result += fmt.Sprintf(
+		"%v\n",
+		color.GreenString(subCommand),
+	)
+}
+
+// CloseGroup closes one group.
+// which break line and unshift indent
+func (o *OutputFormatter) CloseGroup() {
+	o.result += "\n"
+	o.currentIndent -= o.Indent
 }
 
 // Print prints constructed help message
@@ -53,13 +71,15 @@ func (o *OutputFormatter) Print() {
 	fmt.Printf(o.result)
 }
 
-func printUsage(flagSet *flag.FlagSet) {
-	outputFormatter := newOutputFormatter(2)
-	outputFormatter.AddGroup(flagSet.Name())
-	flagSet.VisitAll(func(flg *flag.Flag) {
-		outputFormatter.AddFlag(flg.Name, "", flg.Usage)
-	})
-	outputFormatter.Print()
+func overrideSubCommandUsage(flagSet *flag.FlagSet) {
+	flagSet.Usage = func() {
+		outputFormatter := newOutputFormatter(2)
+		outputFormatter.AddGroup(flagSet.Name())
+		flagSet.VisitAll(func(flg *flag.Flag) {
+			outputFormatter.AddFlag(flg)
+		})
+		outputFormatter.Print()
+	}
 }
 
 func fetchFlagSet(flagSets []*flag.FlagSet, firstArg string) *flag.FlagSet {
@@ -71,36 +91,52 @@ func fetchFlagSet(flagSets []*flag.FlagSet, firstArg string) *flag.FlagSet {
 	return nil
 }
 
+// overrideUsages overrides usage help massege of
+// main command and sub commands
 func overrideUsages(flagSets []*flag.FlagSet) {
 	// Override main help
-	flag.CommandLine.Usage = func() {
+	flag.Usage = func() {
+		outputFormatter := newOutputFormatter(2)
+
+		outputFormatter.AddGroup(flag.CommandLine.Name())
 		flag.CommandLine.VisitAll(func(flg *flag.Flag) {
-			fmt.Println(flg.Name)
-
+			outputFormatter.AddFlag(flg)
 		})
+		outputFormatter.CloseGroup()
 
+		outputFormatter.AddGroup("Sub Commands")
 		for _, flagSet := range flagSets {
-			printUsage(flagSet)
+			outputFormatter.AddSubCommand(flagSet.Name())
 		}
+		outputFormatter.Print()
 	}
+	// set colorable stderr
+	flag.CommandLine.SetOutput(colorable.NewColorableStderr())
 
 	// Override sub command help
 	for _, flagSet := range flagSets {
-		flagSet.Usage = func() {
-			printUsage(flagSet)
-		}
+		overrideSubCommandUsage(flagSet)
+		// set colorable stderr
+		flagSet.SetOutput(colorable.NewColorableStderr())
 	}
 }
 
 // Parse parse subcommands and override usage
-func Parse(flagSets []*flag.FlagSet) {
+func Parse(flagSets []*flag.FlagSet) string {
 	overrideUsages(flagSets)
+
+	if len(os.Args) == 1 {
+		flag.Parse()
+		return ""
+	}
 
 	firstArg := os.Args[1]
 	fetchedFlagSet := fetchFlagSet(flagSets, firstArg)
-	if fetchedFlagSet != nil {
-		fetchedFlagSet.Parse(os.Args[2:])
-	} else {
+
+	if fetchedFlagSet == nil {
 		flag.Parse()
+		return ""
 	}
+	fetchedFlagSet.Parse(os.Args[2:])
+	return fetchedFlagSet.Name()
 }
