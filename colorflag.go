@@ -9,12 +9,24 @@ import (
 	"github.com/mattn/go-colorable"
 )
 
+var (
+	// Indent indicates depth of one indent level
+	// (the number of spaces inserted).
+	Indent int = 2
+
+	// ExpandsSubCommand defines whether options and flags
+	// of sub-commands are displayed in the top level help
+	// message.
+	ExpandsSubCommand bool = true
+)
+
 // OutputFormatter is a formatter that constructs help
 // messages in a structured way.
 type OutputFormatter struct {
 	Indent        int
 	currentIndent int
 	result        string
+	currentFlags  []*flag.Flag
 }
 
 func newOutputFormatter(indent int) *OutputFormatter {
@@ -23,15 +35,21 @@ func newOutputFormatter(indent int) *OutputFormatter {
 	}
 }
 
-func (o *OutputFormatter) addIndent() {
-	for i := 0; i < o.currentIndent; i++ {
-		o.result += " "
+func (o *OutputFormatter) makeOffsetSpaces(n int) string {
+	res := ""
+	for i := 0; i < n; i++ {
+		res += " "
 	}
+	return res
 }
 
-// AddGroup adds group name which is followd by
+func (o *OutputFormatter) addIndent() {
+	o.result += o.makeOffsetSpaces(o.currentIndent)
+}
+
+// InitGroup adds group name which is followd by
 // multiple options or flags
-func (o *OutputFormatter) AddGroup(groupName string) {
+func (o *OutputFormatter) InitGroup(groupName string) {
 	o.addIndent()
 	o.result += color.YellowString(groupName) + "\n"
 	o.currentIndent += o.Indent
@@ -40,14 +58,7 @@ func (o *OutputFormatter) AddGroup(groupName string) {
 // AddFlag adds group name which is followd by
 // multiple options or flags
 func (o *OutputFormatter) AddFlag(flg *flag.Flag) {
-	name, usage := flag.UnquoteUsage(flg)
-	o.addIndent()
-	o.result += fmt.Sprintf(
-		"%v <%v> %v\n",
-		color.GreenString("-"+flg.Name),
-		name,
-		usage,
-	)
+	o.currentFlags = append(o.currentFlags, flg)
 }
 
 // AddSubCommand adds subcommand
@@ -62,8 +73,39 @@ func (o *OutputFormatter) AddSubCommand(subCommand string) {
 // CloseGroup closes one group.
 // which break line and unshift indent
 func (o *OutputFormatter) CloseGroup() {
+	flagNames := []string{}
+	names := []string{}
+	usages := []string{}
+	for _, flg := range o.currentFlags {
+		name, usage := flag.UnquoteUsage(flg)
+		flagNames = append(flagNames, flg.Name)
+		names = append(names, name)
+		usages = append(usages, usage)
+	}
+
+	offsetSlices1 := makeOffsets(flagNames)
+	offsetSlices2 := makeOffsets(names)
+
+	for i := 0; i < len(o.currentFlags); i++ {
+		flagName := flagNames[i]
+		name := names[i]
+		usage := usages[i]
+		offset1 := offsetSlices1[i]
+		offset2 := offsetSlices2[i]
+
+		o.addIndent()
+		o.result += fmt.Sprintf(
+			"%v%v <%v>%v %v\n",
+			color.GreenString("-"+flagName),
+			o.makeOffsetSpaces(offset1),
+			name,
+			o.makeOffsetSpaces(offset2),
+			usage,
+		)
+	}
 	o.result += "\n"
 	o.currentIndent -= o.Indent
+	o.currentFlags = []*flag.Flag{}
 }
 
 // Print prints constructed help message
@@ -73,11 +115,12 @@ func (o *OutputFormatter) Print() {
 
 func overrideSubCommandUsage(flagSet *flag.FlagSet) {
 	flagSet.Usage = func() {
-		outputFormatter := newOutputFormatter(2)
-		outputFormatter.AddGroup(flagSet.Name())
+		outputFormatter := newOutputFormatter(Indent)
+		outputFormatter.InitGroup(flagSet.Name())
 		flagSet.VisitAll(func(flg *flag.Flag) {
 			outputFormatter.AddFlag(flg)
 		})
+		outputFormatter.CloseGroup()
 		outputFormatter.Print()
 	}
 }
@@ -96,18 +139,28 @@ func fetchFlagSet(flagSets []*flag.FlagSet, firstArg string) *flag.FlagSet {
 func overrideUsages(flagSets []*flag.FlagSet) {
 	// Override main help
 	flag.Usage = func() {
-		outputFormatter := newOutputFormatter(2)
+		outputFormatter := newOutputFormatter(Indent)
 
-		outputFormatter.AddGroup(flag.CommandLine.Name())
+		outputFormatter.InitGroup(flag.CommandLine.Name())
 		flag.CommandLine.VisitAll(func(flg *flag.Flag) {
 			outputFormatter.AddFlag(flg)
 		})
 		outputFormatter.CloseGroup()
 
-		outputFormatter.AddGroup("Sub Commands")
+		outputFormatter.InitGroup("subcommands")
 		for _, flagSet := range flagSets {
-			outputFormatter.AddSubCommand(flagSet.Name())
+			if ExpandsSubCommand {
+				outputFormatter.InitGroup(flagSet.Name())
+				flagSet.VisitAll(func(flg *flag.Flag) {
+					outputFormatter.AddFlag(flg)
+				})
+				outputFormatter.CloseGroup()
+			} else {
+				outputFormatter.AddSubCommand(flagSet.Name())
+			}
 		}
+		outputFormatter.CloseGroup()
+
 		outputFormatter.Print()
 	}
 	// set colorable stderr
