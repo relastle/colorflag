@@ -18,7 +18,26 @@ var (
 	// of sub-commands are displayed in the top level help
 	// message.
 	ExpandsSubCommand bool = true
+
+	// TitleColor specifies color of title
+	// such as `subcommand`.
+	TitleColor string = "yellow"
+
+	// FlagColor specifies color of flags
+	FlagColor string = "green"
 )
+
+// colorFuncMap maps color name to colorize function
+var colorFuncMap = map[string](func(format string, a ...interface{}) string){
+	"black":   color.BlackString,
+	"red":     color.RedString,
+	"green":   color.GreenString,
+	"yellow":  color.YellowString,
+	"blue":    color.BlueString,
+	"magenda": color.MagentaString,
+	"cyan":    color.CyanString,
+	"white":   color.WhiteString,
+}
 
 // OutputFormatter is a formatter that constructs help
 // messages in a structured way.
@@ -51,7 +70,7 @@ func (o *OutputFormatter) addIndent() {
 // multiple options or flags
 func (o *OutputFormatter) InitGroup(groupName string) {
 	o.addIndent()
-	o.result += color.YellowString(groupName) + "\n"
+	o.result += colorFuncMap[TitleColor](groupName) + "\n"
 	o.currentIndent += o.Indent
 }
 
@@ -66,7 +85,7 @@ func (o *OutputFormatter) AddSubCommand(subCommand string) {
 	o.addIndent()
 	o.result += fmt.Sprintf(
 		"%v\n",
-		color.GreenString(subCommand),
+		colorFuncMap[FlagColor](subCommand),
 	)
 }
 
@@ -99,7 +118,7 @@ func (o *OutputFormatter) CloseGroup() {
 		o.addIndent()
 		o.result += fmt.Sprintf(
 			"%v%v <%v>%v %v (default: %v)\n",
-			color.GreenString("-"+flagName),
+			colorFuncMap[FlagColor]("-"+flagName),
 			o.makeOffsetSpaces(offset1),
 			name,
 			o.makeOffsetSpaces(offset2),
@@ -178,8 +197,27 @@ func overrideUsages(flagSets []*flag.FlagSet) {
 	}
 }
 
+func validateOneColor(color string) {
+	colorKeys := []string{}
+	for k := range colorFuncMap {
+		if color == k {
+			return
+		}
+		colorKeys = append(colorKeys, k)
+	}
+	panic(fmt.Sprintf("color should be in %v", colorKeys))
+}
+
+func validateColors() {
+	validateOneColor(TitleColor)
+	validateOneColor(FlagColor)
+}
+
 // Parse parse subcommands and override usage
 func Parse(flagSets []*flag.FlagSet) string {
+	// validate colors
+	validateColors()
+
 	overrideUsages(flagSets)
 
 	if len(os.Args) == 1 {
