@@ -76,11 +76,13 @@ func (o *OutputFormatter) CloseGroup() {
 	flagNames := []string{}
 	names := []string{}
 	usages := []string{}
+	defValues := []string{}
 	for _, flg := range o.currentFlags {
 		name, usage := flag.UnquoteUsage(flg)
 		flagNames = append(flagNames, flg.Name)
 		names = append(names, name)
 		usages = append(usages, usage)
+		defValues = append(defValues, flg.DefValue)
 	}
 
 	offsetSlices1 := makeOffsets(flagNames)
@@ -90,17 +92,19 @@ func (o *OutputFormatter) CloseGroup() {
 		flagName := flagNames[i]
 		name := names[i]
 		usage := usages[i]
+		defValue := defValues[i]
 		offset1 := offsetSlices1[i]
 		offset2 := offsetSlices2[i]
 
 		o.addIndent()
 		o.result += fmt.Sprintf(
-			"%v%v <%v>%v %v\n",
+			"%v%v <%v>%v %v (default: %v)\n",
 			color.GreenString("-"+flagName),
 			o.makeOffsetSpaces(offset1),
 			name,
 			o.makeOffsetSpaces(offset2),
 			usage,
+			defValue,
 		)
 	}
 	o.result += "\n"
