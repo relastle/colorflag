@@ -170,19 +170,21 @@ func overrideUsages(flagSets []*flag.FlagSet) {
 		})
 		outputFormatter.CloseGroup()
 
-		outputFormatter.InitGroup("subcommands")
-		for _, flagSet := range flagSets {
-			if ExpandsSubCommand {
-				outputFormatter.InitGroup(flagSet.Name())
-				flagSet.VisitAll(func(flg *flag.Flag) {
-					outputFormatter.AddFlag(flg)
-				})
-				outputFormatter.CloseGroup()
-			} else {
-				outputFormatter.AddSubCommand(flagSet.Name())
+		if len(flagSets) > 0 {
+			outputFormatter.InitGroup("subcommands")
+			for _, flagSet := range flagSets {
+				if ExpandsSubCommand {
+					outputFormatter.InitGroup(flagSet.Name())
+					flagSet.VisitAll(func(flg *flag.Flag) {
+						outputFormatter.AddFlag(flg)
+					})
+					outputFormatter.CloseGroup()
+				} else {
+					outputFormatter.AddSubCommand(flagSet.Name())
+				}
 			}
+			outputFormatter.CloseGroup()
 		}
-		outputFormatter.CloseGroup()
 
 		outputFormatter.Print()
 	}
