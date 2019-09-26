@@ -12,19 +12,19 @@ import (
 var (
 	// Indent indicates depth of one indent level
 	// (the number of spaces inserted).
-	Indent int = 2
+	Indent = 2
 
 	// ExpandsSubCommand defines whether options and flags
 	// of sub-commands are displayed in the top level help
 	// message.
-	ExpandsSubCommand bool = true
+	ExpandsSubCommand = true
 
 	// TitleColor specifies color of title
 	// such as `subcommand`.
-	TitleColor string = "yellow"
+	TitleColor = "yellow"
 
 	// FlagColor specifies color of flags
-	FlagColor string = "green"
+	FlagColor = "green"
 )
 
 // colorFuncMap maps color name to colorize function
