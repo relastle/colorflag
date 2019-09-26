@@ -13,13 +13,13 @@ func main() {
 
 	// sub command 1
 	sub1FlagSet := flag.NewFlagSet("sub1", flag.ExitOnError)
-	sub1FlagSet.String("sub1-string-option", "default string value", "Description of string option of sub command 1")
-	sub1FlagSet.Int("sub1-integer-option", 2, "Description of integer option for sub command")
-	sub1FlagSet.Bool("sub1-bool-flag", false, "Description of flag for sub command")
+	sub1FlagSet.String("sub1-option-string", "default string value", "Description of string option of sub command 1")
+	sub1FlagSet.Int("sub1-option-integer", 2, "Description of integer option for sub command")
+	sub1FlagSet.Bool("sub1-flag-bool", false, "Description of flag for sub command")
 
 	// sub command 2
 	sub2FlagSet := flag.NewFlagSet("sub2", flag.ExitOnError)
-	sub2FlagSet.String("sub2-string option", "", "Description of string option of sub command 2")
+	sub2FlagSet.String("sub2-option-string", "", "Description of string option of sub command 2")
 
 	// Optional
 	colorflag.Indent = 4               // default is 2
