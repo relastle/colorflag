@@ -2,6 +2,12 @@
 
 colorflag provides colorized help for CLI applications using Go's `flag` standard library
 
+## Installation
+
+```zsh
+go get github.com/relastle/colorflag
+```
+
 ## Example
 
 #### Sample code
