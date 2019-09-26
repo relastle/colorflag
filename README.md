@@ -1,10 +1,13 @@
 # colorflag
 
-colorflag privides colorized help for CLI application using Go's `flag` standard library
+colorflag provides colorized help for CLI applications using Go's `flag` standard library
 
 ## Example
 
+#### Sample code
+
 ```go
+
 package main
 
 import (
@@ -29,8 +32,10 @@ func main() {
 	sub2FlagSet.String("sub2-string option", "", "Description of string option of sub command 2")
 
 	// Optional
-	colorflag.Indent = 4 // default is 2
+	colorflag.Indent = 4               // default is 2
 	colorflag.ExpandsSubCommand = true // default is true
+	colorflag.TitleColor = "green"     // default is yellow
+	colorflag.FlagColor = "cyan"       // default is green
 
 	// Parse (and return selected sub command name)
 	subCommand := colorflag.Parse([]*flag.FlagSet{
@@ -47,4 +52,11 @@ func main() {
 }
 ```
 
+#### Help output
+
 ![](./example/figures/sub-expand-example.png)
+
+
+# [License](LICENSE)
+
+The MIT License (MIT)
